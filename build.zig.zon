@@ -27,10 +27,6 @@
             .url = "git+https://github.com/zigimg/zigimg.git#e3565c4f0b03bd65581aee743f59d15835b1f1a2",
             .hash = "1220c7744f058ccc99e1414f812d04b922d8e6699fcc7af161f52c8a991aa06e1926",
         },
-        .termsize = .{
-            .url = "git+https://github.com/softprops/zig-termsize?ref=v0.1.0#6dfcb96e1514ffed99620ab9b5e6a9e05ba83441",
-            .hash = "1220c37fb03650fd86dff19134116a2bd7e8e20731193aa30f11769881a2d558c8c1",
-        },
     },
     .paths = .{
         "build.zig",

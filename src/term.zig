@@ -1,25 +1,64 @@
 const std = @import("std");
-const termsize = @import("termsize");
 const Color = @import("color.zig").Color;
+const builtin = @import("builtin");
 
-pub const Term = struct {
+pub const TermSize = struct {
     width: usize,
     height: usize,
+
+    // Edit of https://github.com/softprops/zig-termsize.git
+    pub fn getTerminalSize() !?TermSize {
+        const term: std.fs.File = std.io.getStdOut();
+        return switch (builtin.os.tag) {
+            .windows => blk: {
+                var buf: std.os.windows.CONSOLE_SCREEN_BUFFER_INFO = undefined;
+                break :blk switch (std.os.windows.kernel32.GetConsoleScreenBufferInfo(
+                    term.handle,
+                    &buf,
+                )) {
+                    std.os.windows.TRUE => TermSize{
+                        .width = @intCast(@divFloor(@abs(buf.srWindow.Right - buf.srWindow.Left + 1), 3)),
+                        .height = @intCast(buf.srWindow.Bottom - buf.srWindow.Top + 1),
+                    },
+                    else => error.Unexpected,
+                };
+            },
+            .linux, .macos => blk: {
+                var buf: std.posix.system.winsize = undefined;
+                break :blk switch (std.posix.errno(
+                    std.posix.system.ioctl(
+                        term.handle,
+                        std.posix.T.IOCGWINSZ,
+                        @intFromPtr(&buf),
+                    ),
+                )) {
+                    .SUCCESS => TermSize{
+                        .width = buf.ws_col / 3,
+                        .height = buf.ws_row,
+                    },
+                    else => error.IoctlError,
+                };
+            },
+            else => error.Unsupported,
+        };
+    }
+};
+
+pub const Term = struct {
+    dimensions: TermSize,
     pixels: []Color,
 
     pub fn init(allocator: std.mem.Allocator) !@This() {
         // Get terminal info
-        const size: ?termsize.TermSize = try termsize.termSize(std.io.getStdOut());
-        const actual_width: usize = size.?.width / 3;
-        const pixels: []Color = try allocator.alloc(Color, actual_width * size.?.height);
+        const size: ?TermSize = try TermSize.getTerminalSize();
+        const pixels: []Color = try allocator.alloc(Color, size.?.width * size.?.height);
         // Start all colors as black
         for (pixels) |*pixel| {
             pixel.* = .{ .r = 0, .g = 0, .b = 0 };
         }
         // Create the terminal struct
         return Term{
-            .width = actual_width,
-            .height = size.?.height,
+            .dimensions = size.?,
             .pixels = pixels,
         };
     }
@@ -29,8 +68,8 @@ pub const Term = struct {
     }
 
     pub fn setPixel(self: *@This(), x: usize, y: usize, pixel: Color) void {
-        if (x < self.width and y < self.height) {
-            self.pixels[y * self.width + x] = pixel;
+        if (x < self.dimensions.width and y < self.dimensions.height) {
+            self.pixels[y * self.dimensions.width + x] = pixel;
         }
     }
 
@@ -45,8 +84,8 @@ pub const Term = struct {
         current_offset += clear_screen.len;
         // Draw pixels
         for (self.pixels, 0..) |pixel, i| {
-            const x = i % self.width;
-            const y = i / self.width;
+            const x = i % self.dimensions.width;
+            const y = i / self.dimensions.width;
             // Add newline at the start of each row (except the first)
             if (x == 0 and y != 0) {
                 buffer[current_offset] = '\n';
@@ -56,7 +95,7 @@ pub const Term = struct {
             const pixel_str = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
             current_offset += pixel_str.len;
             // Flush buffer if it's nearly full
-            if (current_offset > buffer.len - 100) {
+            if (current_offset > buffer.len - 32) {
                 try stdout.writeAll(buffer[0..current_offset]);
                 current_offset = 0;
             }

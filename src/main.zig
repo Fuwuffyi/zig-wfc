@@ -16,18 +16,17 @@ pub fn main() !void {
     defer allocator.free(tiles);
     // Debug stuff
     std.debug.print("Tilecount: {}", .{tiles.len});
-    for (tiles) |tile| {
+    for (tiles, 0..) |tile, i| {
         defer tile.deinit(&allocator);
+        // Calculate terminal coordinates
+        const x = (i % terminal.dimensions.width) * tile_size;
+        const y = (i / terminal.dimensions.width) * tile_size;
+        // Draw the tile
+        for (tile.colors, 0..) |color, j| {
+            const x_offset = j % tile_size;
+            const y_offset = j / tile_size;
+            terminal.setPixel(x + x_offset, y + y_offset, color);
+        }
     }
-    // Debug terminal
-
-    for (1..500) |i| {
-        const x: usize = (i / 10) % 10;
-        const y: usize = (i % 10) % 10;
-        const ox: usize = ((i - 1) / 10) % 10;
-        const oy: usize = ((i - 1) % 10) % 10;
-        terminal.setPixel(x, y, .{ .r = 255, .g = 0, .b = 0 });
-        terminal.setPixel(ox, oy, .{ .r = 0, .g = 255, .b = 0 });
-        try terminal.draw();
-    }
+    try terminal.draw();
 }

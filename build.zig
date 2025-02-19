@@ -12,12 +12,6 @@ pub fn build(b: *std.Build) void {
         .name = "zig-wfc",
         .root_module = exe_mod,
     });
-    // Add termsize dep
-    const termsize = b.dependency("termsize", .{
-        .target = target,
-        .optimize = optimize,
-    }).module("termsize");
-    exe.root_module.addImport("termsize", termsize);
     // Add zigimg dep
     const zigimg_dependency = b.dependency("zigimg", .{
         .target = target,
