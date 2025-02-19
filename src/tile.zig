@@ -40,20 +40,12 @@ pub const Tile = struct {
                 }
             }
             // Finalize the new tile
-            tile.* = .{ .colors = colors, .freq = 0 };
+            tile.* = .{ .colors = colors, .freq = 1 };
         }
         return tiles;
     }
 
-    pub fn deinit(self: *const Tile, allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: @This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.colors);
-    }
-
-    pub fn color_hash(self: *const Tile) u64 {
-        var hasher = std.hash.Wyhash.init(0);
-        for (self.colors) |col| {
-            std.hash.autoHash(&hasher, col);
-        }
-        return hasher.final();
     }
 };

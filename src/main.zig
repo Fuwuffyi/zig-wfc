@@ -10,9 +10,9 @@ pub fn main() !void {
     const tile_size: u8 = 3;
     const tiles = try Tile.generate_tiles(&allocator, "tilesets/Lake.png", tile_size);
     defer allocator.free(tiles);
-    // Read the tile data
+    // Debug stuff
+    std.debug.print("Tilecount: {}", .{tiles.len});
     for (tiles) |tile| {
         defer tile.deinit(&allocator);
-        std.debug.print("Hash: {}", .{tile.color_hash()});
     }
 }
