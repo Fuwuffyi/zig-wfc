@@ -35,26 +35,37 @@ pub const Term = struct {
     }
 
     pub fn draw(self: @This()) !void {
-        var buffer: [16384]u8 = undefined;
+        // Base variables to print to console
+        const stdout = std.io.getStdOut().writer();
+        var buffer: [32768]u8 = undefined;
         var current_offset: usize = 0;
-        const first_write: []u8 = try std.fmt.bufPrint(&buffer, "\x1B[2J\x1B[H", .{});
-        current_offset = first_write.len;
+        // Clear screen and move cursor to top-left
+        const clear_screen = "\x1B[2J\x1B[H";
+        std.mem.copyForwards(u8, buffer[current_offset..], clear_screen);
+        current_offset += clear_screen.len;
+        // Draw pixels
         for (self.pixels, 0..) |pixel, i| {
             const x = i % self.width;
             const y = i / self.width;
+            // Add newline at the start of each row (except the first)
             if (x == 0 and y != 0) {
-                const other_write: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\n", .{});
-                current_offset += other_write.len;
+                buffer[current_offset] = '\n';
+                current_offset += 1;
             }
-            const other_write: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
-            current_offset += other_write.len;
-            if (current_offset > buffer.len - 200) {
-                std.debug.print("{s}", .{buffer[0..current_offset]});
+            // Format pixel color and spaces
+            const pixel_str = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
+            current_offset += pixel_str.len;
+            // Flush buffer if it's nearly full
+            if (current_offset > buffer.len - 100) {
+                try stdout.writeAll(buffer[0..current_offset]);
                 current_offset = 0;
             }
         }
-        const last_write: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[0m\n", .{});
-        current_offset += last_write.len;
-        std.debug.print("{s}", .{buffer[0..current_offset]});
+        // Reset color and add final newline
+        const reset_color = "\x1B[0m\n";
+        std.mem.copyForwards(u8, buffer[current_offset..], reset_color);
+        current_offset += reset_color.len;
+        // Flush remaining buffer
+        try stdout.writeAll(buffer[0..current_offset]);
     }
 };
