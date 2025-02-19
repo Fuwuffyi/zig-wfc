@@ -5,7 +5,7 @@ const Color = struct { r: u8, g: u8, b: u8 };
 
 pub const Tile = struct {
     colors: []Color,
-    dim: u8,
+    freq: u32,
 
     pub fn generate_tiles(allocator: *const std.mem.Allocator, image_file: []const u8, tile_size: u8) ![]Tile {
         // Read image
@@ -30,9 +30,9 @@ pub const Tile = struct {
             // Read the colors from the pixels array
             var colors_idx: usize = 0;
             for (0..tile_size) |dy| {
-                const y: usize = (i / tile_size + dy) % image.height;
+                const y: usize = (i / image.height + dy) % image.height;
                 for (0..tile_size) |dx| {
-                    const x: usize = (i % tile_size + dx) % image.width;
+                    const x: usize = (i % image.width + dx) % image.width;
                     const pixels_idx: usize = y * image.width + x;
                     const color = &pixels[pixels_idx];
                     colors[colors_idx] = .{ .r = color.r, .g = color.g, .b = color.b };
@@ -40,12 +40,20 @@ pub const Tile = struct {
                 }
             }
             // Finalize the new tile
-            tile.* = .{ .colors = colors, .dim = tile_size };
+            tile.* = .{ .colors = colors, .freq = 0 };
         }
         return tiles;
     }
 
     pub fn deinit(self: *const Tile, allocator: *const std.mem.Allocator) void {
         allocator.free(self.colors);
+    }
+
+    pub fn color_hash(self: *const Tile) u64 {
+        var hasher = std.hash.Wyhash.init(0);
+        for (self.colors) |col| {
+            std.hash.autoHash(&hasher, col);
+        }
+        return hasher.final();
     }
 };
