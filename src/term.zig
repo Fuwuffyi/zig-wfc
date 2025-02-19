@@ -73,6 +73,12 @@ pub const Term = struct {
         }
     }
 
+    pub fn clearPixels(self: *@This()) void {
+        for (self.pixels) |*pixel| {
+            pixel.* = .{ .r = 0, .g = 0, .b = 0 };
+        }
+    }
+
     pub fn draw(self: @This()) !void {
         // Base variables to print to console
         const stdout = std.io.getStdOut().writer();
@@ -101,7 +107,7 @@ pub const Term = struct {
             }
         }
         // Reset color and add final newline
-        const reset_color = "\x1B[0m\n";
+        const reset_color = "\x1B[0m";
         std.mem.copyForwards(u8, buffer[current_offset..], reset_color);
         current_offset += reset_color.len;
         // Flush remaining buffer

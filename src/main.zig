@@ -18,10 +18,9 @@ pub fn main() !void {
     std.debug.print("Tilecount: {}", .{tiles.len});
     for (tiles, 0..) |tile, i| {
         defer tile.deinit(&allocator);
-        // Calculate terminal coordinates
-        const x = (i % terminal.dimensions.width) * tile_size;
-        const y = (i / terminal.dimensions.width) * tile_size;
-        // Draw the tile
+        // Draw all the tiles to the terminal
+        const x = (i % 16) * (tile_size + 1);
+        const y = (i / 16) * (tile_size + 1);
         for (tile.colors, 0..) |color, j| {
             const x_offset = j % tile_size;
             const y_offset = j / tile_size;
