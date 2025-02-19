@@ -33,8 +33,8 @@ pub const TermSize = struct {
                     ),
                 )) {
                     .SUCCESS => TermSize{
-                        .width = buf.ws_col / 3,
-                        .height = buf.ws_row,
+                        .width = buf.col / 3,
+                        .height = buf.row,
                     },
                     else => error.IoctlError,
                 };
