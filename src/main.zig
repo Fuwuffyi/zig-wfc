@@ -20,8 +20,14 @@ pub fn main() !void {
         defer tile.deinit(&allocator);
     }
     // Debug terminal
-    terminal.setPixel(0, 5, .{ .r = 255, .g = 12, .b = 32 });
-    terminal.draw();
-    terminal.setPixel(0, 2, .{ .r = 255, .g = 12, .b = 32 });
-    terminal.draw();
+
+    for (1..500) |i| {
+        const x: usize = (i / 10) % 10;
+        const y: usize = (i % 10) % 10;
+        const ox: usize = ((i - 1) / 10) % 10;
+        const oy: usize = ((i - 1) % 10) % 10;
+        terminal.setPixel(x, y, .{ .r = 255, .g = 0, .b = 0 });
+        terminal.setPixel(ox, oy, .{ .r = 0, .g = 255, .b = 0 });
+        try terminal.draw();
+    }
 }

@@ -34,16 +34,27 @@ pub const Term = struct {
         }
     }
 
-    pub fn draw(self: @This()) void {
-        std.debug.print("\x1B[2J\x1B[H", .{});
+    pub fn draw(self: @This()) !void {
+        var buffer: [16384]u8 = undefined;
+        var current_offset: usize = 0;
+        const first_write: []u8 = try std.fmt.bufPrint(&buffer, "\x1B[2J\x1B[H", .{});
+        current_offset = first_write.len;
         for (self.pixels, 0..) |pixel, i| {
             const x = i % self.width;
             const y = i / self.width;
             if (x == 0 and y != 0) {
-                std.debug.print("\n", .{});
+                const other_write: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\n", .{});
+                current_offset += other_write.len;
             }
-            std.debug.print("\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
+            const other_write: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
+            current_offset += other_write.len;
+            if (current_offset > buffer.len - 200) {
+                std.debug.print("{s}", .{buffer[0..current_offset]});
+                current_offset = 0;
+            }
         }
-        std.debug.print("\x1B[0m\n", .{});
+        const last_write: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[0m\n", .{});
+        current_offset += last_write.len;
+        std.debug.print("{s}", .{buffer[0..current_offset]});
     }
 };
