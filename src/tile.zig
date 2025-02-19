@@ -1,15 +1,6 @@
 const std = @import("std");
+const Color = @import("color.zig").Color;
 const zigimg = @import("zigimg");
-
-const Color = struct {
-    r: u8,
-    g: u8,
-    b: u8,
-
-    fn eql(a: Color, b: Color) bool {
-        return a.r == b.r and a.g == b.g and a.b == b.b;
-    }
-};
 
 pub const Tile = struct {
     colors: []Color,

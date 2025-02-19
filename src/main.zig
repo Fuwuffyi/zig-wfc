@@ -1,11 +1,15 @@
 const std = @import("std");
 const Tile = @import("tile.zig").Tile;
+const Term = @import("term.zig").Term;
 
 pub fn main() !void {
     // Create allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    // Initialize a terminal object
+    var terminal: Term = try Term.init(allocator);
+    defer terminal.deinit(allocator);
     // Get the tiles
     const tile_size: u8 = 3;
     const tiles = try Tile.generate_tiles(&allocator, "tilesets/Lake.png", tile_size);
@@ -15,4 +19,9 @@ pub fn main() !void {
     for (tiles) |tile| {
         defer tile.deinit(&allocator);
     }
+    // Debug terminal
+    terminal.setPixel(0, 5, .{ .r = 255, .g = 12, .b = 32 });
+    terminal.draw();
+    terminal.setPixel(0, 2, .{ .r = 255, .g = 12, .b = 32 });
+    terminal.draw();
 }
