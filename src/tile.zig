@@ -1,7 +1,15 @@
 const std = @import("std");
 const zigimg = @import("zigimg");
 
-const Color = struct { r: u8, g: u8, b: u8 };
+const Color = struct {
+    r: u8,
+    g: u8,
+    b: u8,
+
+    fn eql(a: Color, b: Color) bool {
+        return a.r == b.r and a.g == b.g and a.b == b.b;
+    }
+};
 
 pub const Tile = struct {
     colors: []Color,
@@ -11,41 +19,89 @@ pub const Tile = struct {
         // Read image
         var image = try zigimg.Image.fromFilePath(allocator.*, image_file);
         defer image.deinit();
-        // Create the tiles to return
-        const tiles: []Tile = try allocator.alloc(Tile, image.width * image.height);
-        errdefer allocator.free(tiles);
         // Load the pixels to a local buffer
         var pixels = try allocator.alloc(Color, image.width * image.height);
         defer allocator.free(pixels);
         var color_it = image.iterator();
         var idx: usize = 0;
         while (color_it.next()) |pixel| : (idx += 1) {
-            pixels[idx] = .{ .r = @intFromFloat(pixel.r * 255), .g = @intFromFloat(pixel.g * 255), .b = @intFromFloat(pixel.b * 255) };
+            pixels[idx] = .{
+                .r = @intFromFloat(pixel.r * 255),
+                .g = @intFromFloat(pixel.g * 255),
+                .b = @intFromFloat(pixel.b * 255),
+            };
+        }
+        // Initialize the hash map to track unique tiles
+        var tile_map = std.AutoHashMap(u64, std.ArrayList(Tile)).init(allocator.*);
+        defer {
+            var it = tile_map.iterator();
+            while (it.next()) |entry| {
+                entry.value_ptr.deinit();
+            }
+            tile_map.deinit();
         }
         // Generate tile colors
-        for (tiles, 0..) |*tile, i| {
+        for (0..(image.width * image.height)) |i| {
             // Allocate new colors for the tile
             const colors = try allocator.alloc(Color, tile_size * tile_size);
             errdefer allocator.free(colors);
             // Read the colors from the pixels array
             var colors_idx: usize = 0;
+            const y_start = i / image.width;
+            const x_start = i % image.width;
             for (0..tile_size) |dy| {
-                const y: usize = (i / image.height + dy) % image.height;
+                const y = (y_start + dy) % image.height;
                 for (0..tile_size) |dx| {
-                    const x: usize = (i % image.width + dx) % image.width;
+                    const x = (x_start + dx) % image.width;
                     const pixels_idx: usize = y * image.width + x;
-                    const color = &pixels[pixels_idx];
-                    colors[colors_idx] = .{ .r = color.r, .g = color.g, .b = color.b };
+                    colors[colors_idx] = pixels[pixels_idx];
                     colors_idx += 1;
                 }
             }
-            // Finalize the new tile
-            tile.* = .{ .colors = colors, .freq = 1 };
+            // Hash colors
+            const colors_bytes = std.mem.sliceAsBytes(colors);
+            const hash = std.hash.Wyhash.hash(0, colors_bytes);
+            // Get or create the entry in the tile_map
+            const gop = try tile_map.getOrPut(hash);
+            if (!gop.found_existing) {
+                gop.value_ptr.* = std.ArrayList(Tile).init(allocator.*);
+            }
+            const list = &gop.value_ptr.*;
+            // Check for existing tile with the same colors
+            var found = false;
+            for (list.items) |*existing_tile| {
+                if (Tile.eql(existing_tile.colors, colors)) {
+                    existing_tile.freq += 1;
+                    allocator.free(colors);
+                    found = true;
+                    break;
+                }
+            }
+            // Create new element if not existing
+            if (!found) {
+                try list.append(.{ .colors = colors, .freq = 1 });
+            }
         }
-        return tiles;
+        // Collect all unique tiles from the hash map into a single list
+        var tiles_list = std.ArrayList(Tile).init(allocator.*);
+        defer tiles_list.deinit();
+        var it = tile_map.iterator();
+        while (it.next()) |entry| {
+            try tiles_list.appendSlice(entry.value_ptr.items);
+        }
+        // Return the owned slice of unique tiles
+        return tiles_list.toOwnedSlice();
     }
 
     pub fn deinit(self: @This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.colors);
+    }
+
+    fn eql(a: []const Color, b: []const Color) bool {
+        if (a.len != b.len) return false;
+        for (a, b) |color_a, color_b| {
+            if (!Color.eql(color_a, color_b)) return false;
+        }
+        return true;
     }
 };
