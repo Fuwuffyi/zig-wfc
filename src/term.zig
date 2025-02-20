@@ -50,6 +50,7 @@ pub const TermSize = struct {
 pub const Term = struct {
     dimensions: TermSize,
     pixels: []Color,
+    buffer: []u8,
 
     pub fn init(allocator: *const std.mem.Allocator) !@This() {
         // Get terminal info
@@ -59,15 +60,20 @@ pub const Term = struct {
         for (pixels) |*pixel| {
             pixel.* = .{ .r = 0, .g = 0, .b = 0 };
         }
+        // Calculate buffer size
+        const buffer_size: usize = (size.width * size.height * 22) + size.height + 11;
+        const buffer: []u8 = try allocator.alloc(u8, buffer_size);
         // Create the terminal struct
         return Term{
             .dimensions = size,
             .pixels = pixels,
+            .buffer = buffer,
         };
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.pixels);
+        allocator.free(self.buffer);
     }
 
     pub fn setPixel(self: *@This(), x: usize, y: usize, pixel: Color) void {
@@ -85,11 +91,10 @@ pub const Term = struct {
     pub fn draw(self: *const @This()) !void {
         // Base variables to print to console
         const stdout = std.io.getStdOut().writer();
-        var buffer: [32768]u8 = undefined;
         var current_offset: usize = 0;
         // Clear screen and move cursor to top-left
         const clear_screen: *const [7:0]u8 = "\x1B[2J\x1B[H";
-        std.mem.copyForwards(u8, buffer[current_offset..], clear_screen);
+        std.mem.copyForwards(u8, self.buffer[current_offset..], clear_screen);
         current_offset += clear_screen.len;
         // Draw pixels
         for (self.pixels, 0..) |*pixel, i| {
@@ -97,23 +102,18 @@ pub const Term = struct {
             const y = i / self.dimensions.width;
             // Add newline at the start of each row (except the first)
             if (x == 0 and y != 0) {
-                buffer[current_offset] = '\n';
+                self.buffer[current_offset] = '\n';
                 current_offset += 1;
             }
             // Format pixel color and spaces
-            const pixel_str: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
+            const pixel_str: []u8 = try std.fmt.bufPrint(self.buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
             current_offset += pixel_str.len;
-            // Flush buffer if it's nearly full
-            if (current_offset > buffer.len - 32) {
-                try stdout.writeAll(buffer[0..current_offset]);
-                current_offset = 0;
-            }
         }
         // Reset color and add final newline
         const reset_color: *const [4:0]u8 = "\x1B[0m";
-        std.mem.copyForwards(u8, buffer[current_offset..], reset_color);
+        std.mem.copyForwards(u8, self.buffer[current_offset..], reset_color);
         current_offset += reset_color.len;
-        // Flush remaining buffer
-        try stdout.writeAll(buffer[0..current_offset]);
+        // Flush buffer
+        try stdout.writeAll(self.buffer[0..current_offset]);
     }
 };
