@@ -48,7 +48,7 @@ pub const Term = struct {
     dimensions: TermSize,
     pixels: []Color,
 
-    pub fn init(allocator: std.mem.Allocator) !@This() {
+    pub fn init(allocator: *const std.mem.Allocator) !@This() {
         // Get terminal info
         const size: ?TermSize = try TermSize.getTerminalSize();
         const pixels: []Color = try allocator.alloc(Color, size.?.width * size.?.height);
@@ -63,7 +63,7 @@ pub const Term = struct {
         };
     }
 
-    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
+    pub fn deinit(self: @This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.pixels);
     }
 
@@ -89,7 +89,7 @@ pub const Term = struct {
         std.mem.copyForwards(u8, buffer[current_offset..], clear_screen);
         current_offset += clear_screen.len;
         // Draw pixels
-        for (self.pixels, 0..) |pixel, i| {
+        for (self.pixels, 0..) |*pixel, i| {
             const x = i % self.dimensions.width;
             const y = i / self.dimensions.width;
             // Add newline at the start of each row (except the first)

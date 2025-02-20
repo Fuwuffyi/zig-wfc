@@ -8,11 +8,11 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     // Initialize a terminal object
-    var terminal: Term = try Term.init(allocator);
-    defer terminal.deinit(allocator);
+    var terminal: Term = try Term.init(&allocator);
+    defer terminal.deinit(&allocator);
     // Get the tiles
     const tile_size: u8 = 3;
-    const tiles = try Tile.generate_tiles(&allocator, "tilesets/Lake.png", tile_size);
+    const tiles = try Tile.generate_tiles(&allocator, "test.png", tile_size);
     defer allocator.free(tiles);
     // Debug stuff
     std.debug.print("Tilecount: {}", .{tiles.len});
