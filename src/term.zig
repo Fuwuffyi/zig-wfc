@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 
 const TermError = error{ Unexpected, Unsupported, IoctlError, DimensionError };
 
+// TODO: Add resize callback maybe?
 pub const TermSize = struct {
     width: usize,
     height: usize,

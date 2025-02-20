@@ -61,7 +61,7 @@ pub const TileSet = struct {
             // Check for existing tile with the same colors
             var found = false;
             for (list.items) |*existing_tile| {
-                if (Tile.eql(existing_tile.colors, colors)) {
+                if (existing_tile.eql(colors)) {
                     existing_tile.freq += 1;
                     allocator.free(colors);
                     found = true;

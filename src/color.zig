@@ -3,7 +3,7 @@ pub const Color = struct {
     g: u8,
     b: u8,
 
-    pub fn eql(a: *const Color, b: *const Color) bool {
+    pub fn eql(a: *const @This(), b: *const Color) bool {
         return a.r == b.r and a.g == b.g and a.b == b.b;
     }
 };

@@ -28,10 +28,10 @@ pub const Tile = struct {
         }
     }
 
-    pub fn eql(a: []const Color, b: []const Color) bool {
-        if (a.len != b.len) return false;
-        for (a, b) |*color_a, *color_b| {
-            if (!Color.eql(color_a, color_b)) return false;
+    pub fn eql(a: *const @This(), b: []const Color) bool {
+        if (a.colors.len != b.len) return false;
+        for (a.colors, b) |*color_a, *color_b| {
+            if (!color_a.eql(color_b)) return false;
         }
         return true;
     }
