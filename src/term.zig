@@ -87,7 +87,7 @@ pub const Term = struct {
         var buffer: [32768]u8 = undefined;
         var current_offset: usize = 0;
         // Clear screen and move cursor to top-left
-        const clear_screen = "\x1B[2J\x1B[H";
+        const clear_screen: *const [7:0]u8 = "\x1B[2J\x1B[H";
         std.mem.copyForwards(u8, buffer[current_offset..], clear_screen);
         current_offset += clear_screen.len;
         // Draw pixels
@@ -100,7 +100,7 @@ pub const Term = struct {
                 current_offset += 1;
             }
             // Format pixel color and spaces
-            const pixel_str = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
+            const pixel_str: []u8 = try std.fmt.bufPrint(buffer[current_offset..], "\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
             current_offset += pixel_str.len;
             // Flush buffer if it's nearly full
             if (current_offset > buffer.len - 32) {
@@ -109,7 +109,7 @@ pub const Term = struct {
             }
         }
         // Reset color and add final newline
-        const reset_color = "\x1B[0m";
+        const reset_color: *const [4:0]u8 = "\x1B[0m";
         std.mem.copyForwards(u8, buffer[current_offset..], reset_color);
         current_offset += reset_color.len;
         // Flush remaining buffer

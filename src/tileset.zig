@@ -70,7 +70,7 @@ pub const TileSet = struct {
             }
             // Create new element if not existing
             if (!found) {
-                try list.append(Tile.init(colors, 1));
+                try list.append(Tile.init(allocator, colors, 1));
             }
         }
         // Collect all unique tiles from the hash map into a single list
