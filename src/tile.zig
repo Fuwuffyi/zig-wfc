@@ -6,6 +6,7 @@ pub const Direction = enum { up, down, left, right };
 pub const Tile = struct {
     colors: []const Color,
     freq: u32,
+    // TODO: Implement adjacencies
     adjacencies: [4]std.ArrayList(usize), // Indexed using Direction
 
     pub fn init(allocator: *const std.mem.Allocator, colors: []const Color, freq: u32) @This() {

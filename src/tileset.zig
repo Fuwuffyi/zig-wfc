@@ -4,7 +4,7 @@ const Color = @import("color.zig").Color;
 const Tile = @import("tile.zig").Tile;
 
 pub const TileSet = struct {
-    tiles: []Tile,
+    tiles: []const Tile,
 
     pub fn init(allocator: *const std.mem.Allocator, image_file: []const u8, tile_size: u8) !@This() {
         // Read image

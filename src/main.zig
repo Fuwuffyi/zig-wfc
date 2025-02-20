@@ -21,14 +21,14 @@ pub fn main() !void {
     defer wfc_map.deinit(&allocator);
     // Debug stuff
     const tile_center_idx: usize = tile_size * tile_size / 2;
-    for (wfc_map.cells, 0..) |cell, i| {
+    for (wfc_map.cells, 0..) |*cell, i| {
         const x = i % terminal.dimensions.width;
         const y = i / terminal.dimensions.width;
         var total_entropy: u32 = 0;
         var sum_r: u32 = 0;
         var sum_g: u32 = 0;
         var sum_b: u32 = 0;
-        for (cell) |idx| {
+        for (cell.items) |idx| {
             total_entropy += tileset.tiles[idx].freq;
             sum_r += tileset.tiles[idx].colors[tile_center_idx].r * tileset.tiles[idx].freq;
             sum_g += tileset.tiles[idx].colors[tile_center_idx].g * tileset.tiles[idx].freq;
