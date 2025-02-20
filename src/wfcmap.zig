@@ -4,6 +4,7 @@ const TileSet = @import("tileset.zig").TileSet;
 
 pub const WfcMap = struct {
     cells: []std.ArrayList(usize),
+    tileset: *const TileSet,
 
     pub fn init(allocator: *const std.mem.Allocator, tileset: *const TileSet, width: usize, height: usize) !@This() {
         const cells: []std.ArrayList(usize) = try allocator.alloc(std.ArrayList(usize), width * height);
@@ -13,7 +14,7 @@ pub const WfcMap = struct {
                 try cell.append(i);
             }
         }
-        return .{ .cells = cells };
+        return .{ .cells = cells, .tileset = tileset };
     }
 
     pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
@@ -23,5 +24,5 @@ pub const WfcMap = struct {
         allocator.free(self.cells);
     }
 
-    // TODO: Implement the collapse method
+    // TODO: Implement WFC algorithm
 };

@@ -19,6 +19,7 @@ pub fn main() !void {
     // Create a map
     const wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
     defer wfc_map.deinit(&allocator);
+
     // Debug stuff
     const tile_center_idx: usize = tile_size * tile_size / 2;
     for (wfc_map.cells, 0..) |*cell, i| {

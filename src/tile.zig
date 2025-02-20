@@ -6,7 +6,6 @@ pub const Direction = enum { up, down, left, right };
 pub const Tile = struct {
     colors: []const Color,
     freq: u32,
-    // TODO: Implement adjacencies
     adjacencies: [4]std.ArrayList(usize), // Indexed using Direction
 
     pub fn init(allocator: *const std.mem.Allocator, colors: []const Color, freq: u32) @This() {
@@ -35,5 +34,18 @@ pub const Tile = struct {
             if (!color_a.eql(color_b)) return false;
         }
         return true;
+    }
+
+    pub fn calculate_adjacencies(self: *@This(), tileset: []const Tile) !void {
+        for (&self.adjacencies) |*adj| {
+            adj.clearAndFree();
+        }
+        // TODO: Proper adjacency check
+        for (tileset, 0..) |*tile, idx| {
+            if (tile.eql(self.colors)) continue;
+            for (&self.adjacencies) |*adj| {
+                try adj.append(idx);
+            }
+        }
     }
 };

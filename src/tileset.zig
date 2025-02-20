@@ -80,8 +80,13 @@ pub const TileSet = struct {
         while (it.next()) |entry| {
             try tiles_list.appendSlice(entry.value_ptr.items);
         }
+        // Calculate adjacencies for each tile
+        const tiles: []Tile = try tiles_list.toOwnedSlice();
+        for (tiles) |*tile| {
+            try tile.calculate_adjacencies(tiles);
+        }
         // Return the owned slice of unique tiles
-        return .{ .tiles = try tiles_list.toOwnedSlice() };
+        return .{ .tiles = tiles };
     }
 
     pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
