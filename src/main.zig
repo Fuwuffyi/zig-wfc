@@ -20,7 +20,7 @@ pub fn main() !void {
     const wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
     defer wfc_map.deinit(&allocator);
     // Debug stuff
-    std.debug.print("Tilecount: {}", .{tileset.tiles.len});
+    const tile_center_idx: usize = tile_size * tile_size / 2;
     for (wfc_map.cells, 0..) |cell, i| {
         const x = i % terminal.dimensions.width;
         const y = i / terminal.dimensions.width;
@@ -30,9 +30,9 @@ pub fn main() !void {
         var sum_b: u32 = 0;
         for (cell) |idx| {
             total_entropy += tileset.tiles[idx].freq;
-            sum_r += tileset.tiles[idx].colors[4].r * tileset.tiles[idx].freq;
-            sum_g += tileset.tiles[idx].colors[4].g * tileset.tiles[idx].freq;
-            sum_b += tileset.tiles[idx].colors[4].b * tileset.tiles[idx].freq;
+            sum_r += tileset.tiles[idx].colors[tile_center_idx].r * tileset.tiles[idx].freq;
+            sum_g += tileset.tiles[idx].colors[tile_center_idx].g * tileset.tiles[idx].freq;
+            sum_b += tileset.tiles[idx].colors[tile_center_idx].b * tileset.tiles[idx].freq;
         }
         terminal.setPixel(x, y, .{ .r = @intCast(sum_r / total_entropy), .g = @intCast(sum_g / total_entropy), .b = @intCast(sum_b / total_entropy) });
     }
