@@ -1,5 +1,5 @@
 const std = @import("std");
-const Tile = @import("tile.zig").Tile;
+const TileSet = @import("tileset.zig").TileSet;
 const Term = @import("term.zig").Term;
 
 pub fn main() !void {
@@ -13,12 +13,11 @@ pub fn main() !void {
     // Get the tiles
     const tile_size_val: u8 = 2;
     const tile_size: u8 = tile_size_val * 2 - 1;
-    const tiles = try Tile.generate_tiles(&allocator, "test.png", tile_size);
-    defer allocator.free(tiles);
+    const tileset: TileSet = try TileSet.init(&allocator, "test.png", tile_size);
+    defer tileset.deinit(&allocator);
     // Debug stuff
-    std.debug.print("Tilecount: {}", .{tiles.len});
-    for (tiles, 0..) |tile, i| {
-        defer tile.deinit(&allocator);
+    std.debug.print("Tilecount: {}", .{tileset.tiles.len});
+    for (tileset.tiles, 0..) |tile, i| {
         // Draw all the tiles to the terminal
         const x = (i % 16) * (tile_size + 1);
         const y = (i / 16) * (tile_size + 1);
