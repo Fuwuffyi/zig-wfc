@@ -65,7 +65,7 @@ pub const Term = struct {
         };
     }
 
-    pub fn deinit(self: @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.pixels);
     }
 
@@ -81,7 +81,7 @@ pub const Term = struct {
         }
     }
 
-    pub fn draw(self: @This()) !void {
+    pub fn draw(self: *const @This()) !void {
         // Base variables to print to console
         const stdout = std.io.getStdOut().writer();
         var buffer: [32768]u8 = undefined;

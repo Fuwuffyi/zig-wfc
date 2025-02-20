@@ -9,7 +9,7 @@ pub const Tile = struct {
         return .{ .colors = colors, .freq = freq };
     }
 
-    pub fn deinit(self: @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.colors);
     }
 

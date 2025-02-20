@@ -84,7 +84,7 @@ pub const TileSet = struct {
         return .{ .tiles = try tiles_list.toOwnedSlice() };
     }
 
-    pub fn deinit(self: @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
         for (self.tiles) |*tile| {
             tile.deinit(allocator);
         }

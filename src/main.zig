@@ -1,6 +1,7 @@
 const std = @import("std");
 const TileSet = @import("tileset.zig").TileSet;
 const Term = @import("term.zig").Term;
+const WfcMap = @import("wfcmap.zig").WfcMap;
 
 pub fn main() !void {
     // Create allocator
@@ -13,19 +14,25 @@ pub fn main() !void {
     // Get the tiles
     const tile_size_val: u8 = 2;
     const tile_size: u8 = tile_size_val * 2 - 1;
-    const tileset: TileSet = try TileSet.init(&allocator, "test.png", tile_size);
+    const tileset: TileSet = try TileSet.init(&allocator, "samples/Dungeon.png", tile_size);
     defer tileset.deinit(&allocator);
+    // Create a map
+    const wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
+    defer wfc_map.deinit(&allocator);
     // Debug stuff
     std.debug.print("Tilecount: {}", .{tileset.tiles.len});
-    for (tileset.tiles, 0..) |tile, i| {
-        // Draw all the tiles to the terminal
-        const x = (i % 16) * (tile_size + 1);
-        const y = (i / 16) * (tile_size + 1);
-        for (tile.colors, 0..) |color, j| {
-            const x_offset = j % tile_size;
-            const y_offset = j / tile_size;
-            terminal.setPixel(x + x_offset, y + y_offset, color);
+    for (wfc_map.cells, 0..) |cell, i| {
+        const x = i % terminal.dimensions.width;
+        const y = i / terminal.dimensions.width;
+        var sum_r: u32 = 0;
+        var sum_g: u32 = 0;
+        var sum_b: u32 = 0;
+        for (cell) |idx| {
+            sum_r += tileset.tiles[idx].colors[4].r;
+            sum_g += tileset.tiles[idx].colors[4].g;
+            sum_b += tileset.tiles[idx].colors[4].b;
         }
+        terminal.setPixel(x, y, .{ .r = @intCast(sum_r / cell.len), .g = @intCast(sum_g / cell.len), .b = @intCast(sum_b / cell.len) });
     }
     try terminal.draw();
 }
