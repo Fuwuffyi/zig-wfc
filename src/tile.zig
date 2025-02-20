@@ -41,6 +41,7 @@ pub const Tile = struct {
         for (&self.adjacencies) |*adj| {
             adj.clearAndFree();
         }
+        // Helper variables
         const edge_width: u8 = (tile_size + 1) / 2;
         const len: u32 = edge_width * tile_size;
         // Loop over all tiles
@@ -61,7 +62,9 @@ pub const Tile = struct {
                 var i: usize = 0;
                 // Run over all the colors for the direction and opposite direction
                 while (i < len) : (i += 1) {
-                    // TODO: Checks are slightly off
+                    // TODO: Checks are slightly off, for the other direction.
+                    // for up/down the inner row links to the outer one,
+                    // for left/right the inner column links to the outer one (in 3x3 cases)
                     const current_idx = blk: {
                         switch (dir) {
                             .up => {
