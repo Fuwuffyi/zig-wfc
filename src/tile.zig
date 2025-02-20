@@ -62,9 +62,6 @@ pub const Tile = struct {
                 var i: usize = 0;
                 // Run over all the colors for the direction and opposite direction
                 while (i < len) : (i += 1) {
-                    // TODO: Checks are slightly off, for the other direction.
-                    // for up/down the inner row links to the outer one,
-                    // for left/right the inner column links to the outer one (in 3x3 cases)
                     const current_idx = blk: {
                         switch (dir) {
                             .up => {
