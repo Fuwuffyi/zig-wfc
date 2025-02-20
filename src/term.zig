@@ -2,6 +2,8 @@ const std = @import("std");
 const Color = @import("color.zig").Color;
 const builtin = @import("builtin");
 
+const TermError = error{ Unexpected, Unsupported, IoctlError, DimensionError };
+
 pub const TermSize = struct {
     width: usize,
     height: usize,
@@ -50,15 +52,15 @@ pub const Term = struct {
 
     pub fn init(allocator: *const std.mem.Allocator) !@This() {
         // Get terminal info
-        const size: ?TermSize = try TermSize.getTerminalSize();
-        const pixels: []Color = try allocator.alloc(Color, size.?.width * size.?.height);
+        const size: TermSize = try TermSize.getTerminalSize() orelse return error.DimensionError;
+        const pixels: []Color = try allocator.alloc(Color, size.width * size.height);
         // Start all colors as black
         for (pixels) |*pixel| {
             pixel.* = .{ .r = 0, .g = 0, .b = 0 };
         }
         // Create the terminal struct
         return Term{
-            .dimensions = size.?,
+            .dimensions = size,
             .pixels = pixels,
         };
     }

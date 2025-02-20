@@ -90,8 +90,8 @@ pub const Tile = struct {
 
     fn eql(a: []const Color, b: []const Color) bool {
         if (a.len != b.len) return false;
-        for (a, b) |color_a, color_b| {
-            if (!Color.eql(&color_a, &color_b)) return false;
+        for (a, b) |*color_a, *color_b| {
+            if (!Color.eql(color_a, color_b)) return false;
         }
         return true;
     }

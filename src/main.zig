@@ -11,7 +11,8 @@ pub fn main() !void {
     var terminal: Term = try Term.init(&allocator);
     defer terminal.deinit(&allocator);
     // Get the tiles
-    const tile_size: u8 = 3;
+    const tile_size_val: u8 = 2;
+    const tile_size: u8 = tile_size_val * 2 - 1;
     const tiles = try Tile.generate_tiles(&allocator, "test.png", tile_size);
     defer allocator.free(tiles);
     // Debug stuff
