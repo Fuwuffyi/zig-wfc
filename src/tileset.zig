@@ -83,7 +83,7 @@ pub const TileSet = struct {
         // Calculate adjacencies for each tile
         const tiles: []Tile = try tiles_list.toOwnedSlice();
         for (tiles) |*tile| {
-            try tile.calculate_adjacencies(tiles);
+            try tile.calculate_adjacencies(tile_size, tiles);
         }
         // Return the owned slice of unique tiles
         return .{ .tiles = tiles };

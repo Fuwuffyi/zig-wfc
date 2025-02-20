@@ -5,8 +5,8 @@ const builtin = @import("builtin");
 const TermError = error{ Unexpected, Unsupported, IoctlError, DimensionError };
 
 pub const TermSize = struct {
-    width: usize,
-    height: usize,
+    width: u32,
+    height: u32,
 
     // Edit of https://github.com/softprops/zig-termsize.git
     pub fn getTerminalSize() !?TermSize {
@@ -76,7 +76,7 @@ pub const Term = struct {
         allocator.free(self.buffer);
     }
 
-    pub fn setPixel(self: *@This(), x: usize, y: usize, pixel: Color) void {
+    pub fn setPixel(self: *@This(), x: u32, y: u32, pixel: Color) void {
         if (x < self.dimensions.width and y < self.dimensions.height) {
             self.pixels[y * self.dimensions.width + x] = pixel;
         }
