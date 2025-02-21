@@ -14,7 +14,7 @@ pub fn main() !void {
     // Get the tiles
     const tile_size_val: u8 = 2;
     const tile_size: u8 = tile_size_val * 2 - 1;
-    const tileset: TileSet = try TileSet.init(&allocator, "samples/Lake.png", tile_size);
+    const tileset: TileSet = try TileSet.init(&allocator, "samples/3Bricks.png", tile_size);
     defer tileset.deinit(&allocator);
     // Create a map
     var wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
