@@ -3,22 +3,29 @@ const TileSet = @import("tileset.zig").TileSet;
 const Term = @import("term.zig").Term;
 const WfcMap = @import("wfcmap.zig").WfcMap;
 
+const FileError = error{FileNotFound};
+
 pub fn main() !void {
-    if (std.os.argv.len < 2) {
-        unreachable;
-    }
-    const filename: [*:0]const u8 = std.os.argv[1];
     // Create allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+    // Read command arguments
+    const argv: [][:0]u8 = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, argv);
+    // Get the file name
+    if (argv.len < 2) {
+        // No file name
+        return error.FileNotFound;
+    }
+    const filename: [:0]const u8 = argv[1];
     // Initialize a terminal object
     var terminal: Term = try Term.init(&allocator);
     defer terminal.deinit(&allocator);
     // Get the tiles
     const tile_size_val: u8 = 2;
     const tile_size: u8 = tile_size_val * 2 - 1;
-    const tileset: TileSet = try TileSet.init(&allocator, std.mem.span(filename), tile_size);
+    const tileset: TileSet = try TileSet.init(&allocator, filename, tile_size);
     defer tileset.deinit(&allocator);
     // Create a map
     var wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
