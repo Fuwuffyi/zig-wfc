@@ -73,6 +73,11 @@ pub const WfcMap = struct {
         var cell_queue: std.ArrayList(usize) = std.ArrayList(usize).init(allocator.*);
         defer cell_queue.deinit();
         try cell_queue.append(starting_index);
+        // Initialization of collapsing structs
+        var allowed = std.AutoHashMap(u32, void).init(allocator.*);
+        defer allowed.deinit();
+        var new_possible = std.ArrayList(u32).init(allocator.*);
+        defer new_possible.deinit();
         // Update cells for as long as they are in the queue
         while (cell_queue.popOrNull()) |current_index| {
             // Get current cell data
@@ -109,8 +114,7 @@ pub const WfcMap = struct {
                 // Skip the neighbor if already collapsed
                 if (neighbor_cell.items.len <= 1) continue;
                 // Get map of allowed indices based on the direction
-                var allowed = std.AutoHashMap(u32, void).init(allocator.*);
-                defer allowed.deinit();
+                allowed.clearAndFree();
                 for (current_cell.items) |tile_idx| {
                     const tile = self.tileset.tiles[tile_idx];
                     const adj_list = tile.adjacencies[@intFromEnum(dir)];
@@ -119,8 +123,7 @@ pub const WfcMap = struct {
                     }
                 }
                 // Create list of possibilities
-                var new_possible = std.ArrayList(u32).init(allocator.*);
-                defer new_possible.deinit();
+                new_possible.clearAndFree();
                 for (neighbor_cell.items) |tile_idx| {
                     if (allowed.contains(tile_idx)) {
                         try new_possible.append(tile_idx);
