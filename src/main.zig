@@ -4,6 +4,10 @@ const Term = @import("term.zig").Term;
 const WfcMap = @import("wfcmap.zig").WfcMap;
 
 pub fn main() !void {
+    if (std.os.argv.len < 2) {
+        unreachable;
+    }
+    const filename: [*:0]const u8 = std.os.argv[1];
     // Create allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -14,7 +18,7 @@ pub fn main() !void {
     // Get the tiles
     const tile_size_val: u8 = 2;
     const tile_size: u8 = tile_size_val * 2 - 1;
-    const tileset: TileSet = try TileSet.init(&allocator, "samples/3Bricks.png", tile_size);
+    const tileset: TileSet = try TileSet.init(&allocator, std.mem.span(filename), tile_size);
     defer tileset.deinit(&allocator);
     // Create a map
     var wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
