@@ -25,7 +25,7 @@ pub fn main() !void {
     // Get the tiles
     const tile_size_val: u8 = 2;
     const tile_size: u8 = tile_size_val * 2 - 1;
-    const tileset: TileSet = try TileSet.init(&allocator, filename, tile_size);
+    var tileset: TileSet = try TileSet.init(&allocator, filename, tile_size);
     defer tileset.deinit(&allocator);
     // Create a map
     var wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
@@ -41,11 +41,12 @@ pub fn main() !void {
             var sum_r: u32 = 0;
             var sum_g: u32 = 0;
             var sum_b: u32 = 0;
-            for (cell.items) |idx| {
-                total_entropy += tileset.tiles[idx].freq;
-                sum_r += tileset.tiles[idx].colors[tile_center_idx].r * tileset.tiles[idx].freq;
-                sum_g += tileset.tiles[idx].colors[tile_center_idx].g * tileset.tiles[idx].freq;
-                sum_b += tileset.tiles[idx].colors[tile_center_idx].b * tileset.tiles[idx].freq;
+            var cell_it = cell.iterator(.{});
+            while (cell_it.next()) |tile| {
+                total_entropy += tileset.tiles[tile].freq;
+                sum_r += tileset.tiles[tile].colors[tile_center_idx].r * tileset.tiles[tile].freq;
+                sum_g += tileset.tiles[tile].colors[tile_center_idx].g * tileset.tiles[tile].freq;
+                sum_b += tileset.tiles[tile].colors[tile_center_idx].b * tileset.tiles[tile].freq;
             }
             terminal.setPixel(x, y, .{ .r = @intCast(sum_r / total_entropy), .g = @intCast(sum_g / total_entropy), .b = @intCast(sum_b / total_entropy) });
         }

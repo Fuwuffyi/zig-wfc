@@ -3,23 +3,24 @@ const Tile = @import("tile.zig").Tile;
 const Direction = @import("tile.zig").Direction;
 const TileSet = @import("tileset.zig").TileSet;
 
+const WfcError = error{Contradiction};
+
 // TODO: Hardcoded seed...
 var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
 const random: std.Random = random_generator.random();
 
 pub const WfcMap = struct {
-    cells: []std.ArrayList(u32),
+    cells: []std.DynamicBitSet,
     width: u32,
     height: u32,
     tileset: *const TileSet,
 
     pub fn init(allocator: *const std.mem.Allocator, tileset: *const TileSet, width: u32, height: u32) !@This() {
-        const cells: []std.ArrayList(u32) = try allocator.alloc(std.ArrayList(u32), width * height);
+        const num_tiles: usize = tileset.tiles.len;
+        const cells: []std.DynamicBitSet = try allocator.alloc(std.DynamicBitSet, width * height);
         for (cells) |*cell| {
-            cell.* = std.ArrayList(u32).init(allocator.*);
-            for (0..tileset.tiles.len) |i| {
-                try cell.append(@intCast(i));
-            }
+            cell.* = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles);
+            cell.*.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
         }
         return .{ .cells = cells, .width = width, .height = height, .tileset = tileset };
     }
@@ -38,11 +39,12 @@ pub const WfcMap = struct {
         defer lowest_entropy_cells.deinit();
         for (self.cells, 0..) |*cell, m_idx| {
             // Skip already collapsed elements
-            if (cell.items.len <= 1) continue;
+            if (cell.count() <= 1) continue;
             // Calculate entropy
             var cell_entropy: u32 = 0;
-            for (cell.items) |c_idx| {
-                cell_entropy += self.tileset.tiles[c_idx].freq;
+            var possible_it = cell.iterator(.{});
+            while (possible_it.next()) |tile| {
+                cell_entropy += self.tileset.tiles[tile].freq;
             }
             // Clear list if new entropy record found
             if (cell_entropy < lowest_entropy) {
@@ -58,14 +60,31 @@ pub const WfcMap = struct {
         if (lowest_entropy == std.math.maxInt(u32)) return true;
         // Collapse a random lowest entropy element
         const rand_index: usize = lowest_entropy_cells.items[random.int(usize) % lowest_entropy_cells.items.len];
-        var rand_cell: *std.ArrayList(u32) = &self.cells[rand_index];
-        const random_tile: u32 = rand_cell.items[random.int(usize) % rand_cell.items.len];
-        rand_cell.clearAndFree();
-        try rand_cell.append(random_tile);
+        var rand_cell = &self.cells[rand_index];
+        const random_tile: u32 = selectTileByFrequency(self.tileset, rand_cell);
+        rand_cell.deinit();
+        rand_cell.* = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
+        rand_cell.set(random_tile);
         // Propagate collapse to adjacent tiles
         try self.update_neighbors(allocator, rand_index);
         // Not finished collapsing everything yet
         return false;
+    }
+
+    fn selectTileByFrequency(tileset: *const TileSet, possible: *const std.DynamicBitSet) u32 {
+        var total: u32 = 0;
+        var it = possible.iterator(.{});
+        while (it.next()) |tile| {
+            total += tileset.tiles[tile].freq;
+        }
+        var rand = random.int(u32) % total;
+        it = possible.iterator(.{});
+        while (it.next()) |tile| {
+            const freq = tileset.tiles[tile].freq;
+            if (rand < freq) return @intCast(tile);
+            rand -= freq;
+        }
+        unreachable;
     }
 
     fn update_neighbors(self: *@This(), allocator: *const std.mem.Allocator, starting_index: usize) !void {
@@ -73,20 +92,14 @@ pub const WfcMap = struct {
         var cell_queue: std.ArrayList(usize) = std.ArrayList(usize).init(allocator.*);
         defer cell_queue.deinit();
         try cell_queue.append(starting_index);
-        // Initialization of collapsing structs
-        var allowed = std.AutoHashMap(u32, void).init(allocator.*);
-        defer allowed.deinit();
-        var new_possible = std.ArrayList(u32).init(allocator.*);
-        defer new_possible.deinit();
         // Update cells for as long as they are in the queue
         while (cell_queue.popOrNull()) |current_index| {
             // Get current cell data
-            const current_cell: *const std.ArrayList(u32) = &self.cells[current_index];
+            const current_cell = &self.cells[current_index];
             const current_x: u32 = @as(u32, @intCast(current_index % self.width));
             const current_y: u32 = @as(u32, @intCast(current_index / self.width));
             // Loop over the directions
-            const directions = [_]Direction{ .up, .down, .left, .right };
-            for (directions) |dir| {
+            for (std.enums.values(Direction)) |dir| {
                 // Get neighbor cell's position
                 var nx: u32 = current_x;
                 var ny: u32 = current_y;
@@ -110,29 +123,22 @@ pub const WfcMap = struct {
                 }
                 // Calculate the neighbor's index
                 const neighbor_index: usize = @as(usize, @intCast(ny * self.width + nx));
-                const neighbor_cell: *std.ArrayList(u32) = &self.cells[neighbor_index];
+                const neighbor_cell = &self.cells[neighbor_index];
                 // Skip the neighbor if already collapsed
-                if (neighbor_cell.items.len <= 1) continue;
+                if (neighbor_cell.count() <= 1) continue;
                 // Get map of allowed indices based on the direction
-                allowed.clearAndFree();
-                for (current_cell.items) |tile_idx| {
-                    const tile = self.tileset.tiles[tile_idx];
-                    const adj_list = tile.adjacencies[@intFromEnum(dir)];
-                    for (adj_list.items) |allowed_idx| {
-                        try allowed.put(allowed_idx, {});
-                    }
+                var allowed = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
+                defer allowed.deinit();
+                var it = current_cell.iterator(.{});
+                while (it.next()) |tile| {
+                    const adj = &self.tileset.tiles[tile].adjacencies[@intFromEnum(dir)];
+                    allowed.setUnion(adj.*);
                 }
-                // Create list of possibilities
-                new_possible.clearAndFree();
-                for (neighbor_cell.items) |tile_idx| {
-                    if (allowed.contains(tile_idx)) {
-                        try new_possible.append(tile_idx);
-                    }
-                }
-                // Update it only if it changed
-                if (new_possible.items.len < neighbor_cell.items.len) {
-                    neighbor_cell.clearAndFree();
-                    try neighbor_cell.appendSlice(new_possible.items);
+                const prev_count = neighbor_cell.count();
+                neighbor_cell.setIntersection(allowed);
+                const new_count = neighbor_cell.count();
+                if (new_count == 0) return error.Contradiction;
+                if (new_count < prev_count) {
                     try cell_queue.append(neighbor_index);
                 }
             }

@@ -6,22 +6,22 @@ pub const Direction = enum(u2) { up, down, left, right };
 pub const Tile = struct {
     colors: []const Color,
     freq: u32,
-    adjacencies: [4]std.ArrayList(u32), // Indexed using Direction
+    adjacencies: [4]std.DynamicBitSet, // Indexed using Direction
 
-    pub fn init(allocator: *const std.mem.Allocator, colors: []const Color, freq: u32) @This() {
+    pub fn init(colors: []const Color, freq: u32) @This() {
         return .{
             .colors = colors,
             .freq = freq,
             .adjacencies = .{
-                std.ArrayList(u32).init(allocator.*),
-                std.ArrayList(u32).init(allocator.*),
-                std.ArrayList(u32).init(allocator.*),
-                std.ArrayList(u32).init(allocator.*),
+                undefined,
+                undefined,
+                undefined,
+                undefined,
             },
         };
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.colors);
         for (&self.adjacencies) |*adj| {
             adj.deinit();
@@ -36,10 +36,10 @@ pub const Tile = struct {
         return true;
     }
 
-    pub fn calculate_adjacencies(self: *@This(), tile_size: u8, tileset: []const Tile) !void {
+    pub fn calculate_adjacencies(self: *@This(), allocator: *const std.mem.Allocator, tile_size: u8, tileset: []const Tile) !void {
         // Clear adjacencies
         for (&self.adjacencies) |*adj| {
-            adj.clearAndFree();
+            adj.* = try std.DynamicBitSet.initEmpty(allocator.*, tileset.len);
         }
         // Helper variables
         const edge_width: u8 = (tile_size + 1) / 2;
@@ -127,7 +127,7 @@ pub const Tile = struct {
                 }
                 // If we have a match, add the adjacency
                 if (match) {
-                    try self.adjacencies[@intFromEnum(dir)].append(@intCast(other_idx));
+                    self.adjacencies[@intFromEnum(dir)].set(@intCast(other_idx));
                 }
             }
         }

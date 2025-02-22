@@ -4,7 +4,7 @@ const Color = @import("color.zig").Color;
 const Tile = @import("tile.zig").Tile;
 
 pub const TileSet = struct {
-    tiles: []const Tile,
+    tiles: []Tile,
 
     pub fn init(allocator: *const std.mem.Allocator, image_file: []const u8, tile_size: u8) !@This() {
         // Read image
@@ -70,7 +70,7 @@ pub const TileSet = struct {
             }
             // Create new element if not existing
             if (!found) {
-                try list.append(Tile.init(allocator, colors, 1));
+                try list.append(Tile.init(colors, 1));
             }
         }
         // Collect all unique tiles from the hash map into a single list
@@ -83,13 +83,13 @@ pub const TileSet = struct {
         // Calculate adjacencies for each tile
         const tiles: []Tile = try tiles_list.toOwnedSlice();
         for (tiles) |*tile| {
-            try tile.calculate_adjacencies(tile_size, tiles);
+            try tile.calculate_adjacencies(allocator, tile_size, tiles);
         }
         // Return the owned slice of unique tiles
         return .{ .tiles = tiles };
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
         for (self.tiles) |*tile| {
             tile.deinit(allocator);
         }
