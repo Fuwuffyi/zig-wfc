@@ -10,24 +10,34 @@ var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
 const random: std.Random = random_generator.random();
 
 pub const WfcMap = struct {
-    cells: []std.DynamicBitSet,
+    const Cell = struct {
+        possible: std.DynamicBitSet,
+        entropy: u32,
+    };
+
+    cells: []Cell,
     width: u32,
     height: u32,
     tileset: *const TileSet,
 
     pub fn init(allocator: *const std.mem.Allocator, tileset: *const TileSet, width: u32, height: u32) !@This() {
         const num_tiles: usize = tileset.tiles.len;
-        const cells: []std.DynamicBitSet = try allocator.alloc(std.DynamicBitSet, width * height);
+        const cells: []Cell = try allocator.alloc(Cell, width * height);
         for (cells) |*cell| {
-            cell.* = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles);
-            cell.*.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
+            var possible = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles);
+            possible.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
+            const entropy = calculate_cell_entropy(tileset, possible);
+            cell.* = .{
+                .possible = possible,
+                .entropy = entropy,
+            };
         }
         return .{ .cells = cells, .width = width, .height = height, .tileset = tileset };
     }
 
     pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
         for (self.cells) |*cell| {
-            cell.deinit();
+            cell.possible.deinit();
         }
         allocator.free(self.cells);
     }
@@ -39,20 +49,14 @@ pub const WfcMap = struct {
         defer lowest_entropy_cells.deinit();
         for (self.cells, 0..) |*cell, m_idx| {
             // Skip already collapsed elements
-            if (cell.count() <= 1) continue;
-            // Calculate entropy
-            var cell_entropy: u32 = 0;
-            var possible_it = cell.iterator(.{});
-            while (possible_it.next()) |tile| {
-                cell_entropy += self.tileset.tiles[tile].freq;
-            }
+            if (cell.possible.count() <= 1) continue;
             // Clear list if new entropy record found
-            if (cell_entropy < lowest_entropy) {
+            if (cell.entropy < lowest_entropy) {
                 lowest_entropy_cells.clearAndFree();
-                lowest_entropy = cell_entropy;
+                lowest_entropy = cell.entropy;
             }
             // Add entropy cell if it has same entropy as best
-            if (cell_entropy == lowest_entropy) {
+            if (cell.entropy == lowest_entropy) {
                 try lowest_entropy_cells.append(m_idx);
             }
         }
@@ -61,17 +65,26 @@ pub const WfcMap = struct {
         // Collapse a random lowest entropy element
         const rand_index: usize = lowest_entropy_cells.items[random.int(usize) % lowest_entropy_cells.items.len];
         var rand_cell = &self.cells[rand_index];
-        const random_tile: u32 = selectTileByFrequency(self.tileset, rand_cell);
-        rand_cell.deinit();
-        rand_cell.* = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
-        rand_cell.set(random_tile);
+        const random_tile: u32 = select_tile_by_frequency(self.tileset, &rand_cell.possible);
+        rand_cell.possible.deinit();
+        rand_cell.possible = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
+        rand_cell.possible.set(random_tile);
         // Propagate collapse to adjacent tiles
         try self.update_neighbors(allocator, rand_index);
         // Not finished collapsing everything yet
         return false;
     }
 
-    fn selectTileByFrequency(tileset: *const TileSet, possible: *const std.DynamicBitSet) u32 {
+    fn calculate_cell_entropy(tileset: *const TileSet, possible: std.DynamicBitSet) u32 {
+        var sum: u32 = 0;
+        var it = possible.iterator(.{});
+        while (it.next()) |tile| {
+            sum += tileset.tiles[tile].freq;
+        }
+        return sum;
+    }
+
+    fn select_tile_by_frequency(tileset: *const TileSet, possible: *const std.DynamicBitSet) u32 {
         var total: u32 = 0;
         var it = possible.iterator(.{});
         while (it.next()) |tile| {
@@ -125,20 +138,21 @@ pub const WfcMap = struct {
                 const neighbor_index: usize = @as(usize, @intCast(ny * self.width + nx));
                 const neighbor_cell = &self.cells[neighbor_index];
                 // Skip the neighbor if already collapsed
-                if (neighbor_cell.count() <= 1) continue;
+                if (neighbor_cell.possible.count() <= 1) continue;
                 // Get map of allowed indices based on the direction
                 var allowed = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
                 defer allowed.deinit();
-                var it = current_cell.iterator(.{});
+                var it = current_cell.possible.iterator(.{});
                 while (it.next()) |tile| {
                     const adj = &self.tileset.tiles[tile].adjacencies[@intFromEnum(dir)];
                     allowed.setUnion(adj.*);
                 }
-                const prev_count = neighbor_cell.count();
-                neighbor_cell.setIntersection(allowed);
-                const new_count = neighbor_cell.count();
+                const prev_count = neighbor_cell.possible.count();
+                neighbor_cell.possible.setIntersection(allowed);
+                const new_count = neighbor_cell.possible.count();
                 if (new_count == 0) return error.Contradiction;
                 if (new_count < prev_count) {
+                    neighbor_cell.entropy = calculate_cell_entropy(self.tileset, neighbor_cell.possible);
                     try cell_queue.append(neighbor_index);
                 }
             }

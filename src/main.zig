@@ -41,7 +41,7 @@ pub fn main() !void {
             var sum_r: u32 = 0;
             var sum_g: u32 = 0;
             var sum_b: u32 = 0;
-            var cell_it = cell.iterator(.{});
+            var cell_it = cell.possible.iterator(.{});
             while (cell_it.next()) |tile| {
                 total_entropy += tileset.tiles[tile].freq;
                 sum_r += tileset.tiles[tile].colors[tile_center_idx].r * tileset.tiles[tile].freq;
