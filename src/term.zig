@@ -56,14 +56,9 @@ pub const Term = struct {
         const size: TermSize = try TermSize.getTerminalSize() orelse return error.DimensionError;
         const pixels: []Color = try allocator.alloc(Color, size.width * size.height);
         // Start all colors as black
-        for (pixels) |*pixel| {
-            pixel.* = .{ .r = 0, .g = 0, .b = 0 };
-        }
-        // Create the terminal struct
-        return Term{
-            .dimensions = size,
-            .pixels = pixels,
-        };
+        var term: Term = .{ .dimensions = size, .pixels = pixels };
+        term.clearPixels();
+        return term;
     }
 
     pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
@@ -91,11 +86,11 @@ pub const Term = struct {
         try writer.writeAll("\x1B[2J\x1B[H");
         // Draw pixels
         for (self.pixels, 0..) |*pixel, i| {
-            const x = i % self.dimensions.width;
-            const y = i / self.dimensions.width;
+            const x: usize = i % self.dimensions.width;
+            const y: usize = i / self.dimensions.width;
             // Add newline at the start of each row (except the first)
             if (x == 0 and y != 0) {
-                try writer.writeAll("\n");
+                try writer.writeByte('\n');
             }
             // Format pixel color and spaces
             try writer.print("\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
