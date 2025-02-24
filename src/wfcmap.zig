@@ -21,8 +21,16 @@ pub const WfcMap = struct {
     tileset: *const TileSet,
 
     pub fn init(allocator: *const std.mem.Allocator, tileset: *const TileSet, width: u32, height: u32) !@This() {
-        var map: WfcMap = .{ .cells = undefined, .width = width, .height = height, .tileset = tileset };
-        try map.reset(allocator);
+        // Create the map
+        var map: WfcMap = .{ .cells = try allocator.alloc(Cell, width * height), .width = width, .height = height, .tileset = tileset };
+        const num_tiles: usize = tileset.tiles.len;
+        for (map.cells) |*cell| {
+            cell.* = .{
+                .possible = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles),
+                .entropy = 0,
+            };
+        }
+        map.reset();
         return map;
     }
 
@@ -33,18 +41,12 @@ pub const WfcMap = struct {
         allocator.free(self.cells);
     }
 
-    pub fn reset(self: *@This(), allocator: *const std.mem.Allocator) !void {
-        // Recreate all cells
+    pub fn reset(self: *@This()) void {
+        // Reset all cells
         const num_tiles: usize = self.tileset.tiles.len;
-        self.cells = try allocator.alloc(Cell, self.width * self.height);
         for (self.cells) |*cell| {
-            var possible = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles);
-            possible.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
-            const entropy = calculate_cell_entropy(self.tileset, possible);
-            cell.* = .{
-                .possible = possible,
-                .entropy = entropy,
-            };
+            cell.possible.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
+            cell.*.entropy = calculate_cell_entropy(self.tileset, cell.possible);
         }
     }
 

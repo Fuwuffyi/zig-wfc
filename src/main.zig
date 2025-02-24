@@ -36,8 +36,7 @@ pub fn main() !void {
     while (!finished_wfc) {
         finished_wfc = wfc_map.step(&allocator) catch |err| blk: {
             if (err == error.Contradiction) {
-                allocator.free(wfc_map.cells);
-                try wfc_map.reset(&allocator);
+                wfc_map.reset();
                 break :blk false;
             }
             unreachable;
