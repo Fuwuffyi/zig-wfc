@@ -22,7 +22,10 @@ pub const Tile = struct {
     }
 
     pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
-        allocator.free(self.colors);
+        defer allocator.free(self.colors);
+        for (self.colors) |row| {
+            allocator.free(row);
+        }
         for (&self.adjacencies) |*adj| {
             adj.deinit();
         }
