@@ -42,7 +42,6 @@ pub fn main() !void {
             }
             unreachable;
         };
-        const tile_center_idx: usize = tile_size * tile_size / 2;
         for (wfc_map.cells, 0..) |*cell, i| {
             const x: u32 = @as(u32, @intCast(i)) % terminal.dimensions.width;
             const y: u32 = @as(u32, @intCast(i)) / terminal.dimensions.width;
@@ -54,9 +53,10 @@ pub fn main() !void {
             var cell_it = cell.possible.iterator(.{});
             while (cell_it.next()) |tile| {
                 total_entropy += tileset.tiles[tile].freq;
-                sum_r += tileset.tiles[tile].colors[tile_center_idx].r * tileset.tiles[tile].freq;
-                sum_g += tileset.tiles[tile].colors[tile_center_idx].g * tileset.tiles[tile].freq;
-                sum_b += tileset.tiles[tile].colors[tile_center_idx].b * tileset.tiles[tile].freq;
+                const clr = tileset.tiles[tile].get_color_at(tile_size / 2, tile_size / 2);
+                sum_r += clr.r * tileset.tiles[tile].freq;
+                sum_g += clr.g * tileset.tiles[tile].freq;
+                sum_b += clr.b * tileset.tiles[tile].freq;
             }
             terminal.setPixel(x, y, .{ .r = @intCast(sum_r / total_entropy), .g = @intCast(sum_g / total_entropy), .b = @intCast(sum_b / total_entropy) });
         }

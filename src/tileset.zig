@@ -34,19 +34,19 @@ pub const TileSet = struct {
         // Generate tile colors
         for (0..(image.width * image.height)) |i| {
             // Allocate new colors for the tile
-            const colors = try allocator.alloc(Color, tile_size * tile_size);
+            const colors = try allocator.alloc([]Color, tile_size);
             errdefer allocator.free(colors);
             // Read the colors from the pixels array
-            var colors_idx: usize = 0;
             const y_start = i / image.width;
             const x_start = i % image.width;
             for (0..tile_size) |dy| {
                 const y = (y_start + dy) % image.height;
+                colors[dy] = try allocator.alloc(Color, tile_size);
+                errdefer allocator.free(colors[dy]);
                 for (0..tile_size) |dx| {
                     const x = (x_start + dx) % image.width;
                     const pixels_idx: usize = y * image.width + x;
-                    colors[colors_idx] = pixels[pixels_idx];
-                    colors_idx += 1;
+                    colors[dy][dx] = pixels[pixels_idx];
                 }
             }
             // Hash colors
