@@ -2,6 +2,7 @@ const std = @import("std");
 const TileSet = @import("tileset.zig").TileSet;
 const Term = @import("term.zig").Term;
 const WfcMap = @import("wfcmap.zig").WfcMap;
+const WfcError = @import("wfcmap.zig").WfcError;
 
 const FileError = error{FileNotFound};
 
@@ -31,7 +32,16 @@ pub fn main() !void {
     var wfc_map: WfcMap = try WfcMap.init(&allocator, &tileset, terminal.dimensions.width, terminal.dimensions.height);
     defer wfc_map.deinit(&allocator);
     // Print wfc state
-    while (!try wfc_map.step(&allocator)) {
+    var finished_wfc: bool = false;
+    while (!finished_wfc) {
+        finished_wfc = wfc_map.step(&allocator) catch |err| blk: {
+            if (err == error.Contradiction) {
+                allocator.free(wfc_map.cells);
+                try wfc_map.reset(&allocator);
+                break :blk false;
+            }
+            unreachable;
+        };
         const tile_center_idx: usize = tile_size * tile_size / 2;
         for (wfc_map.cells, 0..) |*cell, i| {
             const x: u32 = @as(u32, @intCast(i)) % terminal.dimensions.width;

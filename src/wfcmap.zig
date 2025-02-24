@@ -3,10 +3,10 @@ const Tile = @import("tile.zig").Tile;
 const Direction = @import("tile.zig").Direction;
 const TileSet = @import("tileset.zig").TileSet;
 
-const WfcError = error{Contradiction};
+pub const WfcError = error{Contradiction};
 
 // TODO: Hardcoded seed...
-var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(0);
+var random_generator: std.Random.Xoshiro256 = std.Random.DefaultPrng.init(42);
 const random: std.Random = random_generator.random();
 
 pub const WfcMap = struct {
@@ -21,18 +21,9 @@ pub const WfcMap = struct {
     tileset: *const TileSet,
 
     pub fn init(allocator: *const std.mem.Allocator, tileset: *const TileSet, width: u32, height: u32) !@This() {
-        const num_tiles: usize = tileset.tiles.len;
-        const cells: []Cell = try allocator.alloc(Cell, width * height);
-        for (cells) |*cell| {
-            var possible = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles);
-            possible.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
-            const entropy = calculate_cell_entropy(tileset, possible);
-            cell.* = .{
-                .possible = possible,
-                .entropy = entropy,
-            };
-        }
-        return .{ .cells = cells, .width = width, .height = height, .tileset = tileset };
+        var map: WfcMap = .{ .cells = undefined, .width = width, .height = height, .tileset = tileset };
+        try map.reset(allocator);
+        return map;
     }
 
     pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
@@ -40,6 +31,21 @@ pub const WfcMap = struct {
             cell.possible.deinit();
         }
         allocator.free(self.cells);
+    }
+
+    pub fn reset(self: *@This(), allocator: *const std.mem.Allocator) !void {
+        // Recreate all cells
+        const num_tiles: usize = self.tileset.tiles.len;
+        self.cells = try allocator.alloc(Cell, self.width * self.height);
+        for (self.cells) |*cell| {
+            var possible = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles);
+            possible.setRangeValue(.{ .start = 0, .end = num_tiles }, true);
+            const entropy = calculate_cell_entropy(self.tileset, possible);
+            cell.* = .{
+                .possible = possible,
+                .entropy = entropy,
+            };
+        }
     }
 
     pub fn step(self: *@This(), allocator: *const std.mem.Allocator) !bool {
