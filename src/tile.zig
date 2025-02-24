@@ -33,7 +33,7 @@ pub const Tile = struct {
         for (0..a.colors.len) |i| {
             if (a.colors[i].len != b[i].len) return false;
             for (0..a.colors[i].len) |j| {
-                if (!a.colors[i][j].eql(&b[i][j])) return false;
+                if (!a.get_color_at(j, i).eql(&b[j][i])) return false;
             }
         }
         return true;
