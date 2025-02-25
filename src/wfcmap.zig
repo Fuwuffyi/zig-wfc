@@ -1,5 +1,6 @@
 const std = @import("std");
 const Tile = @import("tile.zig").Tile;
+const Color = @import("color.zig").Color;
 const Direction = @import("tile.zig").Direction;
 const TileSet = @import("tileset.zig").TileSet;
 
@@ -57,6 +58,26 @@ pub const WfcMap = struct {
                 cell.*.entropy = calculate_cell_entropy(self.tileset, cell.possible);
             }
         }
+    }
+
+    pub fn get_color_at(self: *const @This(), x: usize, y: usize) Color {
+        const cell = &self.cells[y][x];
+        var sum_r: u32 = 0;
+        var sum_g: u32 = 0;
+        var sum_b: u32 = 0;
+        var entropy: u32 = 0;
+        var cell_it = cell.possible.iterator(.{});
+        while (cell_it.next()) |tile_idx| {
+            const tile: Tile = self.tileset.tiles[tile_idx];
+            const w: usize = tile.colors.len;
+            const h: usize = tile.colors[0].len;
+            const clr: *const Color = tile.get_color_at(w / 2, h / 2);
+            sum_r += clr.r * tile.freq;
+            sum_g += clr.g * tile.freq;
+            sum_b += clr.b * tile.freq;
+            entropy += tile.freq;
+        }
+        return .{ .r = @intCast(sum_r / entropy), .g = @intCast(sum_g / entropy), .b = @intCast(sum_b / entropy) };
     }
 
     pub fn step(self: *@This(), allocator: *const std.mem.Allocator) !bool {

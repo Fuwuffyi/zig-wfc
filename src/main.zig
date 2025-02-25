@@ -42,22 +42,10 @@ pub fn main() !void {
             unreachable;
         };
         for (wfc_map.cells, 0..) |*row, i| {
-            for (row.*, 0..) |*cell, j| {
+            for (0..row.len) |j| {
                 const x: u32 = @intCast(j);
                 const y: u32 = @intCast(i);
-                var total_entropy: u32 = 0;
-                var sum_r: u32 = 0;
-                var sum_g: u32 = 0;
-                var sum_b: u32 = 0;
-                var cell_it = cell.possible.iterator(.{});
-                while (cell_it.next()) |tile| {
-                    total_entropy += tileset.tiles[tile].freq;
-                    const clr = tileset.tiles[tile].get_color_at(tile_size / 2, tile_size / 2);
-                    sum_r += clr.r * tileset.tiles[tile].freq;
-                    sum_g += clr.g * tileset.tiles[tile].freq;
-                    sum_b += clr.b * tileset.tiles[tile].freq;
-                }
-                terminal.setPixel(x, y, .{ .r = @intCast(sum_r / total_entropy), .g = @intCast(sum_g / total_entropy), .b = @intCast(sum_b / total_entropy) });
+                terminal.setPixel(x, y, wfc_map.get_color_at(x, y));
             }
         }
         try terminal.draw();
