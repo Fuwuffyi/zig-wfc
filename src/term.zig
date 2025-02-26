@@ -61,7 +61,7 @@ pub const Term = struct {
         return term;
     }
 
-    pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
         allocator.free(self.pixels);
     }
 
@@ -72,9 +72,7 @@ pub const Term = struct {
     }
 
     pub fn clearPixels(self: *@This()) void {
-        for (self.pixels) |*pixel| {
-            pixel.* = .{ .r = 0, .g = 0, .b = 0 };
-        }
+        @memset(self.pixels, .{ .r = 0, .g = 0, .b = 0 });
     }
 
     pub fn draw(self: *const @This()) !void {
@@ -83,21 +81,18 @@ pub const Term = struct {
         var buf_writer = std.io.bufferedWriter(stdout);
         var writer = buf_writer.writer();
         // Clear screen and move cursor to top-left
-        try writer.writeAll("\x1B[2J\x1B[H");
+        try writer.writeAll("\x1B[H");
         // Draw pixels
-        for (self.pixels, 0..) |*pixel, i| {
-            const x: usize = i % self.dimensions.width;
-            const y: usize = i / self.dimensions.width;
-            // Add newline at the start of each row (except the first)
-            if (x == 0 and y != 0) {
-                try writer.writeByte('\n');
+        for (0..self.dimensions.height) |y| {
+            if (y != 0) try writer.writeByte('\n');
+            for (0..self.dimensions.width) |x| {
+                const pixel = self.pixels[y * self.dimensions.width + x];
+                try writer.print("\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
             }
-            // Format pixel color and spaces
-            try writer.print("\x1B[48;2;{};{};{}m   ", .{ pixel.r, pixel.g, pixel.b });
+            try writer.writeAll("\x1B[0m");
         }
-        // Reset color and add final newline
-        try writer.writeAll("\x1B[0m");
-        // Flush buffer
+        // Reset color and move cursor back to home position
+        try writer.writeAll("\x1B[0m\x1B[H");
         try buf_writer.flush();
     }
 };
