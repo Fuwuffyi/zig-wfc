@@ -1,4 +1,4 @@
-pub const Color = struct {
+pub const Color = packed struct {
     r: u8,
     g: u8,
     b: u8,

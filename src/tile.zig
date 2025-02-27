@@ -34,10 +34,7 @@ pub const Tile = struct {
     pub fn eql(a: *const @This(), b: []const []const Color) bool {
         if (a.colors.len != b.len) return false;
         for (0..a.colors.len) |i| {
-            if (a.colors[i].len != b[i].len) return false;
-            for (0..a.colors[i].len) |j| {
-                if (!a.get_color_at(j, i).eql(&b[j][i])) return false;
-            }
+            if (!std.mem.eql(Color, a.colors[i], b[i])) return false;
         }
         return true;
     }
