@@ -34,15 +34,19 @@ pub const Tile = struct {
     pub fn eql(a: *const @This(), b: []const []const Color) bool {
         if (a.colors.len != b.len) return false;
         for (0..a.colors.len) |i| {
-            if (!std.mem.eql(Color, a.colors[i], b[i])) return false;
+            if (a.colors[i].len != b[i].len) return false;
+            for (0..a.colors[i].len) |j| {
+                if (!a.get_color_at(j, i).eql(&b[j][i])) return false;
+            }
         }
         return true;
     }
 
     pub fn get_color_at(self: *const @This(), x: usize, y: usize) *const Color {
-        if (y < 0 or y > self.colors.len) unreachable;
-        if (x < 0 or x > self.colors[0].len) unreachable;
-        return &self.colors[y][x];
+        if (y >= self.colors.len) unreachable;
+        const row = self.colors[y];
+        if (x >= row.len) unreachable;
+        return &row[x];
     }
 
     pub fn calculate_adjacencies(self: *@This(), allocator: *const std.mem.Allocator, tile_size: u8, tileset: []const Tile) !void {
@@ -52,6 +56,7 @@ pub const Tile = struct {
         }
         // Helper variables
         const edge_width: u8 = (tile_size + 1) / 2;
+        const right_edge_start: u8 = tile_size - edge_width;
         // Loop over all tiles
         for (tileset, 0..) |*other_tile, other_idx| {
             // Skip self
@@ -61,33 +66,30 @@ pub const Tile = struct {
                 const match: bool = switch (dir) {
                     Direction.up => blk: {
                         for (0..edge_width) |y| {
-                            for (0..self.colors[0].len) |x| {
-                                if (!self.colors[y][x].eql(&other_tile.colors[y + edge_width - 1][x])) break :blk false;
-                            }
+                            if (!std.mem.eql(Color, self.colors[y], other_tile.colors[y + edge_width - 1])) break :blk false;
                         }
                         break :blk true;
                     },
                     Direction.down => blk: {
                         for (0..edge_width) |y| {
-                            for (0..self.colors[0].len) |x| {
-                                if (!self.colors[y + edge_width - 1][x].eql(&other_tile.colors[y][x])) break :blk false;
-                            }
+                            if (!std.mem.eql(Color, self.colors[y + edge_width - 1], other_tile.colors[y])) break :blk false;
                         }
                         break :blk true;
                     },
                     Direction.left => blk: {
                         for (0..self.colors.len) |y| {
-                            for (0..edge_width) |x| {
-                                if (!self.colors[y][x].eql(&other_tile.colors[y][x + edge_width - 1])) break :blk false;
-                            }
+                            const self_edge = self.colors[y][0..edge_width];
+                            const other_edge = other_tile.colors[y][right_edge_start..];
+                            if (!std.mem.eql(Color, self_edge, other_edge)) break :blk false;
                         }
                         break :blk true;
                     },
                     Direction.right => blk: {
                         for (0..self.colors.len) |y| {
-                            for (0..edge_width) |x| {
-                                if (!self.colors[y][x + edge_width - 1].eql(&other_tile.colors[y][x])) break :blk false;
-                            }
+                            const self_edge = self.colors[y][right_edge_start..];
+                            const other_edge = other_tile.colors[y][0..edge_width];
+                            if (!std.mem.eql(Color, self_edge, other_edge))
+                                break :blk false;
                         }
                         break :blk true;
                     },
