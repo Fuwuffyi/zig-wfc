@@ -147,7 +147,7 @@ pub const WfcMap = struct {
         defer cell_queue.deinit();
         try cell_queue.append(starting_index.*);
         // Update cells for as long as they are in the queue
-        while (cell_queue.popOrNull()) |current_index| {
+        while (cell_queue.pop()) |current_index| {
             // Get current cell data
             const current_cell: *const Cell = &self.cells[@intCast(current_index.@"0")][@intCast(current_index.@"1")];
             // Loop over the directions

@@ -26,7 +26,7 @@ pub const TermSize = struct {
                 };
             },
             .linux, .macos => blk: {
-                var buf: std.posix.system.winsize = undefined;
+                var buf: std.posix.winsize = undefined;
                 break :blk switch (std.posix.errno(
                     std.posix.system.ioctl(
                         term.handle,
