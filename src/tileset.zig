@@ -6,9 +6,9 @@ const Tile = @import("tile.zig").Tile;
 pub const TileSet = struct {
     tiles: []Tile,
 
-    pub fn init(allocator: *const std.mem.Allocator, image_file: []const u8, tile_size: u8) !@This() {
+    pub fn init(allocator: std.mem.Allocator, image_file: []const u8, tile_size: u8) !@This() {
         // Read image
-        var image = try zigimg.Image.fromFilePath(allocator.*, image_file);
+        var image = try zigimg.Image.fromFilePath(allocator, image_file);
         defer image.deinit();
         // Load the pixels to a local buffer
         var pixels = try allocator.alloc(Color, image.width * image.height);
@@ -23,7 +23,7 @@ pub const TileSet = struct {
             };
         }
         // Initialize the hash map to track unique tiles
-        var tile_map = std.AutoHashMap(u64, std.ArrayList(Tile)).init(allocator.*);
+        var tile_map = std.AutoHashMap(u64, std.ArrayList(Tile)).init(allocator);
         defer {
             var it = tile_map.iterator();
             while (it.next()) |entry| {
@@ -55,7 +55,7 @@ pub const TileSet = struct {
             // Get or create the entry in the tile_map
             const gop = try tile_map.getOrPut(hash);
             if (!gop.found_existing) {
-                gop.value_ptr.* = std.ArrayList(Tile).init(allocator.*);
+                gop.value_ptr.* = std.ArrayList(Tile).init(allocator);
             }
             const list = &gop.value_ptr.*;
             // Check for existing tile with the same colors
@@ -74,7 +74,7 @@ pub const TileSet = struct {
             }
         }
         // Collect all unique tiles from the hash map into a single list
-        var tiles_list = std.ArrayList(Tile).init(allocator.*);
+        var tiles_list = std.ArrayList(Tile).init(allocator);
         defer tiles_list.deinit();
         var it = tile_map.iterator();
         while (it.next()) |entry| {
@@ -89,10 +89,10 @@ pub const TileSet = struct {
         return .{ .tiles = tiles };
     }
 
-    pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         for (self.tiles) |*tile| {
             tile.deinit(allocator);
         }
-        allocator.*.free(self.tiles);
+        allocator.free(self.tiles);
     }
 };

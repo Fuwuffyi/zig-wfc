@@ -51,7 +51,7 @@ pub const Term = struct {
     dimensions: TermSize,
     pixels: []Color,
 
-    pub fn init(allocator: *const std.mem.Allocator) !@This() {
+    pub fn init(allocator: std.mem.Allocator) !@This() {
         // Get terminal info
         const size: TermSize = try TermSize.getTerminalSize() orelse return error.DimensionError;
         const pixels: []Color = try allocator.alloc(Color, size.width * size.height);
@@ -61,7 +61,7 @@ pub const Term = struct {
         return term;
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
         allocator.free(self.pixels);
     }
 

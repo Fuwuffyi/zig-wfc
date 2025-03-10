@@ -22,7 +22,7 @@ pub const WfcMap = struct {
     height: u32,
     tileset: *const TileSet,
 
-    pub fn init(allocator: *const std.mem.Allocator, tileset: *const TileSet, width: u32, height: u32) !@This() {
+    pub fn init(allocator: std.mem.Allocator, tileset: *const TileSet, width: u32, height: u32) !@This() {
         // Create the map
         var map: WfcMap = .{ .cells = try allocator.alloc([]Cell, height), .width = width, .height = height, .tileset = tileset };
         const num_tiles: usize = tileset.tiles.len;
@@ -30,7 +30,7 @@ pub const WfcMap = struct {
             row.* = try allocator.alloc(Cell, width);
             for (row.*) |*cell| {
                 cell.* = .{
-                    .possible = try std.DynamicBitSet.initEmpty(allocator.*, num_tiles),
+                    .possible = try std.DynamicBitSet.initEmpty(allocator, num_tiles),
                     .entropy = 0,
                 };
             }
@@ -39,7 +39,7 @@ pub const WfcMap = struct {
         return map;
     }
 
-    pub fn deinit(self: *const @This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *const @This(), allocator: std.mem.Allocator) void {
         for (self.cells) |*row| {
             defer allocator.free(row.*);
             for (row.*) |*cell| {
@@ -80,10 +80,10 @@ pub const WfcMap = struct {
         return .{ .r = @intCast(sum_r / entropy), .g = @intCast(sum_g / entropy), .b = @intCast(sum_b / entropy) };
     }
 
-    pub fn step(self: *@This(), allocator: *const std.mem.Allocator) !bool {
+    pub fn step(self: *@This(), allocator: std.mem.Allocator) !bool {
         // Get lowest entropy elements
         var lowest_entropy: u32 = std.math.maxInt(u32);
-        var lowest_entropy_cells: std.ArrayList(Pair) = std.ArrayList(Pair).init(allocator.*);
+        var lowest_entropy_cells: std.ArrayList(Pair) = std.ArrayList(Pair).init(allocator);
         defer lowest_entropy_cells.deinit();
         for (self.cells, 0..) |*row, row_idx| {
             for (row.*, 0..) |*cell, col_idx| {
@@ -108,7 +108,7 @@ pub const WfcMap = struct {
         var rand_cell: *Cell = &self.cells[@intCast(rand_index.@"0")][@intCast(rand_index.@"1")];
         const random_tile: u32 = select_tile_by_frequency(self.tileset, &rand_cell.possible);
         rand_cell.possible.deinit();
-        rand_cell.possible = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
+        rand_cell.possible = try std.DynamicBitSet.initEmpty(allocator, self.tileset.tiles.len);
         rand_cell.possible.set(random_tile);
         // Propagate collapse to adjacent tiles
         try self.update_neighbors(allocator, &rand_index);
@@ -141,9 +141,9 @@ pub const WfcMap = struct {
         unreachable;
     }
 
-    fn update_neighbors(self: *@This(), allocator: *const std.mem.Allocator, starting_index: *const Pair) !void {
+    fn update_neighbors(self: *@This(), allocator: std.mem.Allocator, starting_index: *const Pair) !void {
         // Create queue of cells to update
-        var cell_queue: std.ArrayList(Pair) = std.ArrayList(Pair).init(allocator.*);
+        var cell_queue: std.ArrayList(Pair) = std.ArrayList(Pair).init(allocator);
         defer cell_queue.deinit();
         try cell_queue.append(starting_index.*);
         // Update cells for as long as they are in the queue
@@ -167,7 +167,7 @@ pub const WfcMap = struct {
                 // Skip the neighbor if already collapsed
                 if (neighbor_cell.possible.count() <= 1) continue;
                 // Get map of allowed indices based on the direction
-                var allowed = try std.DynamicBitSet.initEmpty(allocator.*, self.tileset.tiles.len);
+                var allowed = try std.DynamicBitSet.initEmpty(allocator, self.tileset.tiles.len);
                 defer allowed.deinit();
                 var it = current_cell.possible.iterator(.{});
                 while (it.next()) |tile| {

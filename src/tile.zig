@@ -21,7 +21,7 @@ pub const Tile = struct {
         };
     }
 
-    pub fn deinit(self: *@This(), allocator: *const std.mem.Allocator) void {
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         defer allocator.free(self.colors);
         for (self.colors) |row| {
             allocator.free(row);
@@ -49,10 +49,10 @@ pub const Tile = struct {
         return &row[x];
     }
 
-    pub fn calculate_adjacencies(self: *@This(), allocator: *const std.mem.Allocator, tile_size: u8, tileset: []const Tile) !void {
+    pub fn calculate_adjacencies(self: *@This(), allocator: std.mem.Allocator, tile_size: u8, tileset: []const Tile) !void {
         // Clear adjacencies
         for (&self.adjacencies) |*adj| {
-            adj.* = try std.DynamicBitSet.initEmpty(allocator.*, tileset.len);
+            adj.* = try std.DynamicBitSet.initEmpty(allocator, tileset.len);
         }
         // Helper variables
         const edge_width: u8 = (tile_size + 1) / 2;
